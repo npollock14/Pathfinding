@@ -40,9 +40,8 @@ public class Driver extends JPanel
 	private void init() {
 		ArrayList<Node> blocked = new ArrayList<Node>();
 		Grid g = new Grid(blocked);
-		g.getPath(new Point(0,0), new Point(0,10));
-		
-		
+		g.getPath(new Point(0, 0), new Point(0, 10));
+
 	}
 
 	// ==================code above ===========================
@@ -155,14 +154,13 @@ public class Driver extends JPanel
 
 }
 
-class Node implements Comparable<Node>{
+class Node implements Comparable<Node> {
 	Point pos;
 	boolean blocked, target, start;
 	int fCost, gCost, sCost;
 	Node parent;
 
-	public Node(Point pos, boolean blocked, boolean target, boolean start, int gCost, int sCost,
-			Node parent) {
+	public Node(Point pos, boolean blocked, boolean target, boolean start, int gCost, int sCost, Node parent) {
 		super();
 		this.pos = pos;
 		this.blocked = blocked;
@@ -184,8 +182,6 @@ class Grid {
 	ArrayList<Node> open = new ArrayList<Node>();
 	ArrayList<Node> closed = new ArrayList<Node>();
 	ArrayList<Node> blocked = new ArrayList<Node>();
-	
-	
 
 	public Grid(ArrayList<Node> blocked) {
 		super();
@@ -194,19 +190,20 @@ class Grid {
 
 	public void getPath(Point a, Point b) {
 		open.add(new Node(a, false, false, true, 0, 0, null));
-
-		while (open.size() > 1) {
+		while (open.size() >= 1) {
 			Node curr = getLoF(open);
 			open.remove(curr);
 			closed.add(curr);
 
 			if (curr.target) {
+				System.out.println("====== FOUND PATH ======");
 				printNodePath(curr);
-				System.out.println("here");
-				break;
+				System.out.println("====== DONE ======");
+				return;
 			}
 			ArrayList<Node> neighbors = getNeighbors(curr, a, b);
 			for (Node n : neighbors) {
+				n.pos.print();
 				if (n.blocked || closed.contains(n)) {
 					continue;
 				}
@@ -217,7 +214,7 @@ class Grid {
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
 					n.parent = curr;
-					
+
 					if (!open.contains(n)) {
 						open.add(n);
 					}
@@ -226,17 +223,18 @@ class Grid {
 			}
 
 		}
+		System.out.println("Couldn't find a path -_-");
 	}
 
 	private void printNodePath(Node n) {
 		ArrayList<Node> nodeTree = new ArrayList<Node>();
-		for(; !n.start; n = n.parent) {
+		for (; !n.start; n = n.parent) {
 			nodeTree.add(n);
 		}
-		for(Node node : nodeTree) {
-			System.out.println(node.pos);
+		for (Node node : nodeTree) {
+			node.pos.print();
 		}
-		
+
 	}
 
 	private ArrayList<Node> getNeighbors(Node curr, Point a, Point b) {
@@ -268,33 +266,33 @@ class Grid {
 					}
 					// add new node
 					Node n = new Node(tempPos, false, tempPos.isSamePosition(b), tempPos.isSamePosition(a),
-							 getGCost(tempPos, b), (int)(curr.sCost + 10*tempPos.distanceTo(curr.pos)), curr);
+							getGCost(tempPos, b), (int) (curr.sCost + 10 * tempPos.distanceTo(curr.pos)), curr);
 					neighbors.add(n);
 				}
 			}
 
 		}
-		
-		//sort neighbors by f cost
+
+		// sort neighbors by f cost
 		Collections.sort(neighbors);
 
 		return neighbors;
 	}
 
-	
 	private int getGCost(Point curr, Point b) {
 		return (Math.abs(curr.x - b.x) - Math.abs(curr.y - b.y)) * 10 + (14
 				* (Math.abs(curr.x - b.x) < Math.abs(curr.y - b.y) ? Math.abs(curr.x - b.x) : Math.abs(curr.y - b.y)));
 	}
+
 	private int getSCost(Node n) {
-		
+
 		int SCost = 0;
-		for(; !n.start; n = n.parent) {
-			SCost += (int)(n.parent.sCost + 10*n.pos.distanceTo(n.parent.pos));
+		for (; !n.start; n = n.parent) {
+			SCost += (int) (n.parent.sCost + 10 * n.pos.distanceTo(n.parent.pos));
 		}
-		
+
 		return SCost;
-		
+
 	}
 
 	private Node getLoF(ArrayList<Node> open) {
