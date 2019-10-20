@@ -1,4 +1,5 @@
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -25,7 +26,7 @@ public class Driver extends JPanel
 	boolean[] keys = new boolean[300];
 	boolean[] keysToggled = new boolean[300];
 	boolean[] mouse = new boolean[200];
-	Camera cam;
+	Camera cam = new Camera(0,0,1.0,screenWidth,screenHeight);
 	Grid gr;
 	static Point mPos;
 
@@ -33,15 +34,38 @@ public class Driver extends JPanel
 
 	public void paint(Graphics g) {
 		super.paintComponent(g);
-		//gr.draw(g);
+		
+		gr.draw(g);
 	}
 
 	public void update() throws InterruptedException {
 		cam.update(keys, getMousePos());
+		//cam.focus(new Point(0,0));
 	}
 
 	private void init() {
-
+		cam.focus(new Point(5000,5000));
+		cam.update(keys, getMousePos());
+		ArrayList<Node> blocked = new ArrayList<Node>();
+		blocked.add(makeBlockerNode(1, 1));
+		blocked.add(makeBlockerNode(0, 2));
+		blocked.add(makeBlockerNode(-1, 0));
+		blocked.add(makeBlockerNode(-1, -1));
+		blocked.add(makeBlockerNode(1, 0));
+		blocked.add(makeBlockerNode(1, -1));
+		blocked.add(makeBlockerNode(0, -1));
+		blocked.add(makeBlockerNode(1, 2));
+		cam.toXScreen(100);
+		// blocked.add(makeBlockerNode(-1, -10));
+		// blocked.add(makeBlockerNode(5, -10));
+		gr = new Grid(blocked, cam);
+		gr.getPath(new Point(8, -4), new Point(3, 8));
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	// ==================code above ===========================
@@ -86,21 +110,6 @@ public class Driver extends JPanel
 		f.addMouseListener(this);
 
 		f.add(this);
-
-		cam = new Camera(0, 0, 1, screenWidth, screenHeight);
-		cam.update(keys, getMousePos());
-		ArrayList<Node> blocked = new ArrayList<Node>();
-		blocked.add(makeBlockerNode(3, -2));
-		blocked.add(makeBlockerNode(4, -2));
-		blocked.add(makeBlockerNode(5, -2));
-		blocked.add(makeBlockerNode(2, -2));
-		blocked.add(makeBlockerNode(1, -2));
-		blocked.add(makeBlockerNode(0, -2));
-		cam.toXScreen(100);
-		// blocked.add(makeBlockerNode(-1, -10));
-		// blocked.add(makeBlockerNode(5, -10));
-		gr = new Grid(blocked, cam);
-		gr.getPath(new Point(0, 0), new Point(3, -4));
 
 		t = new Timer(15, this);
 		t.start();
@@ -219,6 +228,7 @@ class Grid {
 	public Grid(ArrayList<Node> blocked, Camera cam) {
 		super();
 		this.blocked = blocked;
+		this.cam = cam;
 	}
 
 	public void getPath(Point a, Point b) {
@@ -227,17 +237,19 @@ class Grid {
 			Node curr = getLoF(open);
 			System.out.print("========================== Chosen: ");
 			curr.pos.print();
-			if(!curr.start) {
-			System.out.print("Parent: ");curr.parent.pos.print();
+			if (!curr.start) {
+				System.out.print("Parent: ");
+				curr.parent.pos.print();
 			}
 			System.out.println("OPEN: ");
 			for (Node n : open) {
 				n.pos.print();
-				if(!n.start) {
-					System.out.print("Parent: ");curr.parent.pos.print();
+				if (!n.start) {
+					System.out.print("Parent: ");
+					curr.parent.pos.print();
 				}
 				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
-				
+
 			}
 			if (!curr.start) {
 				curr.parent.pos.print();
@@ -249,6 +261,8 @@ class Grid {
 				System.out.println("====== FOUND PATH ======");
 				setNodePath(curr);
 				System.out.println("====== DONE ======");
+				open.clear();
+				closed.clear();
 				return;
 			}
 			ArrayList<Node> neighbors = getNeighbors(curr, a, b);
@@ -257,16 +271,13 @@ class Grid {
 				if (n.blocked || closed.contains(n)) {
 					continue;
 				}
+				if (!open.contains(n)) {
 
-				//Node temp = n; //TODO (0,-1)'s neighbor is getting changed from (0,0) after being chosen by something other than (0,0)
-				//temp.parent = curr;
-				//temp.sCost = getSCost(temp);
-				if (!open.contains(n)) {// || temp.sCost < n.sCost) {
-					
 					n.parent = curr;
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
-					System.out.println("Set (" + n.pos.x + ", " + n.pos.y + ")'s parent to: (" + n.parent.pos.x + ", " + n.parent.pos.y + ")");
+					System.out.println("Set (" + n.pos.x + ", " + n.pos.y + ")'s parent to: (" + n.parent.pos.x + ", "
+							+ n.parent.pos.y + ")");
 					if (!open.contains(n)) {
 						open.add(n);
 					}
@@ -330,7 +341,8 @@ class Grid {
 					// add new node
 					Node n = new Node(tempPos, false, tempPos.isSamePosition(b), tempPos.isSamePosition(a),
 							getGCost(tempPos, b), 0, curr);
-					System.out.println("Created (" + n.pos.x + ", " + n.pos.y + ") and set their parent to: (" + curr.pos.x + ", " + curr.pos.y + ")");
+					System.out.println("Created (" + n.pos.x + ", " + n.pos.y + ") and set their parent to: ("
+							+ curr.pos.x + ", " + curr.pos.y + ")");
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
 					neighbors.add(n);
@@ -377,29 +389,32 @@ class Grid {
 		// draw lines
 		int w = 10;
 
-		for (Node o : open) {
-			System.out.println(o.sCost);
-			g.setColor(Color.GREEN);
-			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
-					(int) (w * cam.scale), (int) (w * cam.scale));
-			g.drawString(o.sCost + "\n" + o.gCost + "\n" + o.fCost, cam.toXScreen(o.pos.x * (w) - w / 2),
-					cam.toYScreen((o.pos.y * (w)) - (w / 2)));
-		}
-		for (Node o : closed) {
-			g.setColor(Color.RED);
-			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
-					(int) (w * cam.scale), (int) (w * cam.scale));
-			g.drawString(o.sCost + "\n" + o.gCost + "\n" + o.fCost, cam.toXScreen(o.pos.x * (w) - w / 2),
-					cam.toYScreen((o.pos.y * (w)) - (w / 2)));
-		}
+		
+		
 		for (Node o : blocked) {
 			g.setColor(Color.BLACK);
-			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2 + 5000), cam.toYScreen((-o.pos.y * (w)) - (w / 2)+ 5000),
 					(int) (w * cam.scale), (int) (w * cam.scale));
-			g.drawString(o.sCost + "\n" + o.gCost + "\n" + o.fCost, cam.toXScreen(o.pos.x * (w) - w / 2),
-					cam.toYScreen((o.pos.y * (w)) - (w / 2)));
+			
 		}
-		for (int i = 0; i <= 500 + 1; i++) {
+		for (Node o : pathTree) {
+			g.setColor(Color.BLUE);
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2+ 5000), cam.toYScreen((-o.pos.y * (w)) - (w / 2)+ 5000),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			
+			if(o.start) {
+				g.setColor(Color.BLACK);
+				g.setFont(new Font("Impact", 1, (int)cam.scale*10));
+				g.drawString("A", cam.toXScreen(o.pos.x*w - w/4+ 5000), cam.toYScreen(-o.pos.y*w + w/4+ 5000));
+			}
+			if(o.target) {
+				g.setColor(Color.BLACK);
+				g.setFont(new Font("Impact", 1, (int)cam.scale*10));
+				g.drawString("B", cam.toXScreen(o.pos.x*w -w/4+ 5000), cam.toYScreen(-o.pos.y*w + w/4+ 5000));
+			}
+			
+		}
+		for (int i = 0; i <= 1000 + 1; i++) {
 			g.setColor(Color.LIGHT_GRAY);
 			g.drawLine(cam.toXScreen(i * 10 - w / 2), cam.toYScreen(0 - w / 2), cam.toXScreen(i * 10 - w / 2),
 					cam.toYScreen(10000 + 5));
@@ -410,7 +425,7 @@ class Grid {
 }
 
 class Camera {
-	int xOff, yOff, screenW, screenH;
+	int xOff = 0, yOff = 0, screenW, screenH;
 	double scale;
 	Point center;
 	float scaleNotches = 0;
