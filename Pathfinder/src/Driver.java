@@ -25,29 +25,37 @@ public class Driver extends JPanel
 	boolean[] keys = new boolean[300];
 	boolean[] keysToggled = new boolean[300];
 	boolean[] mouse = new boolean[200];
+	Camera cam;
+	Grid gr;
+	static Point mPos;
 
 	// ============== end of settings ==================
 
 	public void paint(Graphics g) {
 		super.paintComponent(g);
-
+		//gr.draw(g);
 	}
 
 	public void update() throws InterruptedException {
-
+		cam.update(keys, getMousePos());
 	}
 
 	private void init() {
-		ArrayList<Node> blocked = new ArrayList<Node>();
-		blocked.add(makeBlockerNode(3,-10));
-		Grid g = new Grid(blocked);
-		g.getPath(new Point(0, 0), new Point(3, -12));
+
 	}
 
 	// ==================code above ===========================
 
 	private Node makeBlockerNode(int x, int y) {
-		return new Node(new Point(x,y),true,false,false,0,0,null);
+		return new Node(new Point(x, y), true, false, false, 0, 0, null);
+	}
+
+	public Point getMousePos() {
+		try {
+			return new Point(this.getMousePosition().x, this.getMousePosition().y);
+		} catch (Exception e) {
+			return mPos;
+		}
 	}
 
 	@Override
@@ -56,7 +64,6 @@ public class Driver extends JPanel
 		try {
 			update();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		repaint();
@@ -79,6 +86,21 @@ public class Driver extends JPanel
 		f.addMouseListener(this);
 
 		f.add(this);
+
+		cam = new Camera(0, 0, 1, screenWidth, screenHeight);
+		cam.update(keys, getMousePos());
+		ArrayList<Node> blocked = new ArrayList<Node>();
+		blocked.add(makeBlockerNode(3, -2));
+		blocked.add(makeBlockerNode(4, -2));
+		blocked.add(makeBlockerNode(5, -2));
+		blocked.add(makeBlockerNode(2, -2));
+		blocked.add(makeBlockerNode(1, -2));
+		blocked.add(makeBlockerNode(0, -2));
+		cam.toXScreen(100);
+		// blocked.add(makeBlockerNode(-1, -10));
+		// blocked.add(makeBlockerNode(5, -10));
+		gr = new Grid(blocked, cam);
+		gr.getPath(new Point(0, 0), new Point(3, -4));
 
 		t = new Timer(15, this);
 		t.start();
@@ -118,6 +140,11 @@ public class Driver extends JPanel
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
 
+		if (e.getWheelRotation() < 0) {
+			cam.changeScale(.1f);
+		} else {
+			cam.changeScale(-.1f);
+		}
 	}
 
 	@Override
@@ -177,7 +204,7 @@ class Node implements Comparable<Node> {
 
 	@Override
 	public int compareTo(Node n) {
-		return n.fCost - this.fCost;
+		return -n.fCost + this.fCost;
 	}
 
 }
@@ -186,8 +213,10 @@ class Grid {
 	ArrayList<Node> open = new ArrayList<Node>();
 	ArrayList<Node> closed = new ArrayList<Node>();
 	ArrayList<Node> blocked = new ArrayList<Node>();
+	ArrayList<Node> pathTree = new ArrayList<Node>();
+	Camera cam;
 
-	public Grid(ArrayList<Node> blocked) {
+	public Grid(ArrayList<Node> blocked, Camera cam) {
 		super();
 		this.blocked = blocked;
 	}
@@ -196,36 +225,48 @@ class Grid {
 		open.add(new Node(a, false, false, true, getGCost(a, b), 0, null));
 		while (open.size() >= 1) {
 			Node curr = getLoF(open);
-			System.out.print("====== Chosen: ");curr.pos.print();
+			System.out.print("========================== Chosen: ");
+			curr.pos.print();
 			if(!curr.start) {
-			curr.parent.pos.print();
+			System.out.print("Parent: ");curr.parent.pos.print();
+			}
+			System.out.println("OPEN: ");
+			for (Node n : open) {
+				n.pos.print();
+				if(!n.start) {
+					System.out.print("Parent: ");curr.parent.pos.print();
+				}
+				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
+				
+			}
+			if (!curr.start) {
+				curr.parent.pos.print();
 			}
 			open.remove(curr);
 			closed.add(curr);
 
 			if (curr.target) {
 				System.out.println("====== FOUND PATH ======");
-				printNodePath(curr);
+				setNodePath(curr);
 				System.out.println("====== DONE ======");
 				return;
 			}
 			ArrayList<Node> neighbors = getNeighbors(curr, a, b);
-			System.out.println("Neighbors: ");
 			for (Node n : neighbors) {
-				
+
 				if (n.blocked || closed.contains(n)) {
 					continue;
 				}
-				n.pos.print();
-				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
-				Node temp = n;
-				temp.parent = curr;
-				temp.sCost = getSCost(temp);
-				if (!open.contains(n) || temp.sCost < n.sCost) {
+
+				//Node temp = n; //TODO (0,-1)'s neighbor is getting changed from (0,0) after being chosen by something other than (0,0)
+				//temp.parent = curr;
+				//temp.sCost = getSCost(temp);
+				if (!open.contains(n)) {// || temp.sCost < n.sCost) {
+					
+					n.parent = curr;
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
-					n.parent = curr;
-
+					System.out.println("Set (" + n.pos.x + ", " + n.pos.y + ")'s parent to: (" + n.parent.pos.x + ", " + n.parent.pos.y + ")");
 					if (!open.contains(n)) {
 						open.add(n);
 					}
@@ -237,23 +278,25 @@ class Grid {
 		System.out.println("Couldn't find a path -_-");
 	}
 
-	private void printNodePath(Node n) {
-		ArrayList<Node> nodeTree = new ArrayList<Node>();
+	private void setNodePath(Node n) {
 		for (; !n.start; n = n.parent) {
-			nodeTree.add(n);
+			pathTree.add(n);
 		}
-		nodeTree.add(n);
-		for (Node node : nodeTree) {
+		pathTree.add(n);
+
+		for (Node node : pathTree) {
 			node.pos.print();
 		}
-		
 
 	}
 
 	private ArrayList<Node> getNeighbors(Node curr, Point a, Point b) {
+
 		ArrayList<Node> neighbors = new ArrayList<Node>();
 		for (Node n : open) {
+
 			if (n.pos.isAdjacentTo(curr.pos)) {
+
 				n.sCost = getSCost(n);
 				n.fCost = n.sCost + n.gCost;
 				neighbors.add(n);
@@ -261,17 +304,16 @@ class Grid {
 		}
 		for (Node n : closed) {
 			if (n.pos.isAdjacentTo(curr.pos)) {
-				if(!n.start) {
-				n.sCost = getSCost(n);
-				n.fCost = n.sCost + n.gCost;
+				if (!n.start) {
+
+					n.sCost = getSCost(n);
+					n.fCost = n.sCost + n.gCost;
 				}
 				neighbors.add(n);
 			}
 		}
 		for (Node n : blocked) {
 			if (n.pos.isAdjacentTo(curr.pos)) {
-				//n.sCost = getSCost(n);
-				//n.fCost = n.sCost + n.gCost;
 				neighbors.add(n);
 			}
 		}
@@ -288,6 +330,7 @@ class Grid {
 					// add new node
 					Node n = new Node(tempPos, false, tempPos.isSamePosition(b), tempPos.isSamePosition(a),
 							getGCost(tempPos, b), 0, curr);
+					System.out.println("Created (" + n.pos.x + ", " + n.pos.y + ") and set their parent to: (" + curr.pos.x + ", " + curr.pos.y + ")");
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
 					neighbors.add(n);
@@ -321,12 +364,109 @@ class Grid {
 		for (Node n : open) {
 			if (n.fCost == lowF.fCost && n.gCost < lowF.gCost) {
 				lowF = n;
-			}else if(n.fCost < lowF.fCost) {
+			} else if (n.fCost < lowF.fCost) {
 				lowF = n;
 			}
-			
+
 		}
 		return lowF;
+	}
+
+	public void draw(Graphics g) {
+
+		// draw lines
+		int w = 10;
+
+		for (Node o : open) {
+			System.out.println(o.sCost);
+			g.setColor(Color.GREEN);
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			g.drawString(o.sCost + "\n" + o.gCost + "\n" + o.fCost, cam.toXScreen(o.pos.x * (w) - w / 2),
+					cam.toYScreen((o.pos.y * (w)) - (w / 2)));
+		}
+		for (Node o : closed) {
+			g.setColor(Color.RED);
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			g.drawString(o.sCost + "\n" + o.gCost + "\n" + o.fCost, cam.toXScreen(o.pos.x * (w) - w / 2),
+					cam.toYScreen((o.pos.y * (w)) - (w / 2)));
+		}
+		for (Node o : blocked) {
+			g.setColor(Color.BLACK);
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			g.drawString(o.sCost + "\n" + o.gCost + "\n" + o.fCost, cam.toXScreen(o.pos.x * (w) - w / 2),
+					cam.toYScreen((o.pos.y * (w)) - (w / 2)));
+		}
+		for (int i = 0; i <= 500 + 1; i++) {
+			g.setColor(Color.LIGHT_GRAY);
+			g.drawLine(cam.toXScreen(i * 10 - w / 2), cam.toYScreen(0 - w / 2), cam.toXScreen(i * 10 - w / 2),
+					cam.toYScreen(10000 + 5));
+			g.drawLine(cam.toXScreen(0 - w / 2), cam.toYScreen(i * 10 - w / 2), cam.toXScreen(10000 - w / 2),
+					cam.toYScreen(i * 10 - w / 2));
+		}
+	}
+}
+
+class Camera {
+	int xOff, yOff, screenW, screenH;
+	double scale;
+	Point center;
+	float scaleNotches = 0;
+	int moveSpeed = 10;
+
+	public Camera(int xOff, int yOff, double scale, int screenW, int screenH) {
+		super();
+		this.xOff = xOff;
+		this.yOff = yOff;
+		this.scale = scale;
+		this.screenW = screenW;
+		this.screenH = screenH;
+		center = new Point(screenW / 2, screenH / 2);
+	}
+
+	public void update(boolean[] keys, Point mousePos) {
+		xOff += keys[65] ? moveSpeed / scale : 0;
+		xOff -= keys[68] ? moveSpeed / scale : 0;
+		yOff += keys[87] ? moveSpeed / scale : 0;
+		yOff -= keys[83] ? moveSpeed / scale : 0;
+
+	}
+
+	public void focus(Point p) {
+		// p = map coordinates
+		// place point p in center of screen & determine how displaced that was
+		xOff = screenW / 2 - p.x;
+		yOff = screenH / 2 - p.y;
+
+	}
+
+	public void changeScale(float notches) {
+		scaleNotches += notches;
+		scale = Math.pow(2, scaleNotches);
+	}
+
+	public int toXScreen(int x) {
+		int dx = (int) ((x + xOff - center.x) * scale);
+		return (center.x + dx);
+
+	}
+
+	public int toYScreen(int y) {
+		int dy = (int) ((y + yOff - center.y) * scale);
+		return (center.y + dy);
+
+	}
+
+	public int toXMap(int x) {
+		return (int) ((x - center.x) / scale) + center.x - xOff;
+
+	}
+
+	public int toYMap(int y) {
+		return (int) ((y - center.y) / scale) + center.y - yOff;
+
 	}
 
 }
