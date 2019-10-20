@@ -68,7 +68,7 @@ public class Driver extends JPanel
 		}
 	}
 
-	// ==================code above ===========================
+	// ==================code above ==========================
 
 	private Node makeBlockerNode(int x, int y) {
 		return new Node(new Point(x, y), true, false, false, 0, 0, null);
