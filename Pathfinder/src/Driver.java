@@ -192,6 +192,7 @@ class Grid {
 		open.add(new Node(a, false, false, true, getGCost(a, b), 0, null));
 		while (open.size() >= 1) {
 			Node curr = getLoF(open);
+			System.out.print("====== Chosen: ");curr.pos.print();
 			open.remove(curr);
 			closed.add(curr);
 
@@ -202,12 +203,14 @@ class Grid {
 				return;
 			}
 			ArrayList<Node> neighbors = getNeighbors(curr, a, b);
+			System.out.println("Neighbors: ");
 			for (Node n : neighbors) {
-				n.pos.print();
-				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
+				
 				if (n.blocked || closed.contains(n)) {
 					continue;
 				}
+				n.pos.print();
+				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
 				Node temp = n;
 				temp.parent = curr;
 				temp.sCost = getSCost(temp);
@@ -269,6 +272,7 @@ class Grid {
 					Node n = new Node(tempPos, false, tempPos.isSamePosition(b), tempPos.isSamePosition(a),
 							getGCost(tempPos, b), 0, curr);
 					n.sCost = getSCost(n);
+					n.fCost = n.sCost + n.gCost;
 					neighbors.add(n);
 				}
 			}
@@ -287,14 +291,7 @@ class Grid {
 	}
 
 	private int getSCost(Node n) {
-
-		int SCost = 0;
-		for (; !n.start; n = n.parent) {
-			SCost += (int) (n.parent.sCost + 10 * n.pos.distanceTo(n.parent.pos));
-		}
-
-		return SCost;
-
+			return (int) (n.parent.sCost + 10 * n.pos.distanceTo(n.parent.pos));
 	}
 
 	private Node getLoF(ArrayList<Node> open) {
