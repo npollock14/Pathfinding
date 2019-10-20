@@ -39,11 +39,16 @@ public class Driver extends JPanel
 
 	private void init() {
 		ArrayList<Node> blocked = new ArrayList<Node>();
+		blocked.add(makeBlockerNode(3,-10));
 		Grid g = new Grid(blocked);
-		g.getPath(new Point(0, 0), new Point(1, 10));
+		g.getPath(new Point(0, 0), new Point(3, -12));
 	}
 
 	// ==================code above ===========================
+
+	private Node makeBlockerNode(int x, int y) {
+		return new Node(new Point(x,y),true,false,false,0,0,null);
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
@@ -265,8 +270,8 @@ class Grid {
 		}
 		for (Node n : blocked) {
 			if (n.pos.isAdjacentTo(curr.pos)) {
-				n.sCost = getSCost(n);
-				n.fCost = n.sCost + n.gCost;
+				//n.sCost = getSCost(n);
+				//n.fCost = n.sCost + n.gCost;
 				neighbors.add(n);
 			}
 		}
