@@ -189,7 +189,7 @@ class Grid {
 	}
 
 	public void getPath(Point a, Point b) {
-		open.add(new Node(a, false, false, true, 0, 0, null));
+		open.add(new Node(a, false, false, true, getGCost(a, b), 0, null));
 		while (open.size() >= 1) {
 			Node curr = getLoF(open);
 			open.remove(curr);
@@ -204,6 +204,7 @@ class Grid {
 			ArrayList<Node> neighbors = getNeighbors(curr, a, b);
 			for (Node n : neighbors) {
 				n.pos.print();
+				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
 				if (n.blocked || closed.contains(n)) {
 					continue;
 				}
@@ -266,7 +267,8 @@ class Grid {
 					}
 					// add new node
 					Node n = new Node(tempPos, false, tempPos.isSamePosition(b), tempPos.isSamePosition(a),
-							getGCost(tempPos, b), (int) (curr.sCost + 10 * tempPos.distanceTo(curr.pos)), curr);
+							getGCost(tempPos, b), 0, curr);
+					n.sCost = getSCost(n);
 					neighbors.add(n);
 				}
 			}
@@ -280,7 +282,7 @@ class Grid {
 	}
 
 	private int getGCost(Point curr, Point b) {
-		return (Math.abs(curr.x - b.x) - Math.abs(curr.y - b.y)) * 10 + (14
+		return (Math.abs(Math.abs(curr.x - b.x) - Math.abs(curr.y - b.y))) * 10 + (14
 				* (Math.abs(curr.x - b.x) < Math.abs(curr.y - b.y) ? Math.abs(curr.x - b.x) : Math.abs(curr.y - b.y)));
 	}
 
