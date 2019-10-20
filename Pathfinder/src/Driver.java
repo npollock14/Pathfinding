@@ -40,8 +40,7 @@ public class Driver extends JPanel
 	private void init() {
 		ArrayList<Node> blocked = new ArrayList<Node>();
 		Grid g = new Grid(blocked);
-		g.getPath(new Point(0, 0), new Point(0, 10));
-
+		g.getPath(new Point(0, 0), new Point(1, 10));
 	}
 
 	// ==================code above ===========================
@@ -173,7 +172,7 @@ class Node implements Comparable<Node> {
 
 	@Override
 	public int compareTo(Node n) {
-		return -n.fCost + this.fCost;
+		return n.fCost - this.fCost;
 	}
 
 }
@@ -193,6 +192,9 @@ class Grid {
 		while (open.size() >= 1) {
 			Node curr = getLoF(open);
 			System.out.print("====== Chosen: ");curr.pos.print();
+			if(!curr.start) {
+			curr.parent.pos.print();
+			}
 			open.remove(curr);
 			closed.add(curr);
 
@@ -235,9 +237,11 @@ class Grid {
 		for (; !n.start; n = n.parent) {
 			nodeTree.add(n);
 		}
+		nodeTree.add(n);
 		for (Node node : nodeTree) {
 			node.pos.print();
 		}
+		
 
 	}
 
@@ -245,16 +249,24 @@ class Grid {
 		ArrayList<Node> neighbors = new ArrayList<Node>();
 		for (Node n : open) {
 			if (n.pos.isAdjacentTo(curr.pos)) {
+				n.sCost = getSCost(n);
+				n.fCost = n.sCost + n.gCost;
 				neighbors.add(n);
 			}
 		}
 		for (Node n : closed) {
 			if (n.pos.isAdjacentTo(curr.pos)) {
+				if(!n.start) {
+				n.sCost = getSCost(n);
+				n.fCost = n.sCost + n.gCost;
+				}
 				neighbors.add(n);
 			}
 		}
 		for (Node n : blocked) {
 			if (n.pos.isAdjacentTo(curr.pos)) {
+				n.sCost = getSCost(n);
+				n.fCost = n.sCost + n.gCost;
 				neighbors.add(n);
 			}
 		}
@@ -291,15 +303,23 @@ class Grid {
 	}
 
 	private int getSCost(Node n) {
-			return (int) (n.parent.sCost + 10 * n.pos.distanceTo(n.parent.pos));
+		int SCost = 0;
+		for (; !n.start; n = n.parent) {
+			SCost += (int) (10 * n.pos.distanceTo(n.parent.pos));
+		}
+
+		return SCost;
 	}
 
 	private Node getLoF(ArrayList<Node> open) {
 		Node lowF = open.get(0);
 		for (Node n : open) {
-			if (n.fCost < lowF.fCost) {
+			if (n.fCost == lowF.fCost && n.gCost < lowF.gCost) {
+				lowF = n;
+			}else if(n.fCost < lowF.fCost) {
 				lowF = n;
 			}
+			
 		}
 		return lowF;
 	}
