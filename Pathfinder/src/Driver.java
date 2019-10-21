@@ -296,35 +296,36 @@ class Grid {
 	}
 
 	public void getPath(Point a, Point b) {
+		double startTime = System.currentTimeMillis();
 		open.add(new Node(a, false, false, true, getGCost(a, b), 0, null));
 		while (open.size() >= 1) {
 			Node curr = getLoF(open);
-			System.out.print("========================== Chosen: ");
+			//System.out.print("========================== Chosen: ");
 			curr.pos.print();
-			if (!curr.start) {
-				System.out.print("Parent: ");
-				curr.parent.pos.print();
-			}
-			System.out.println("OPEN: ");
+//			if (!curr.start) {
+//				//System.out.print("Parent: ");
+//				//curr.parent.pos.print();
+//			}
+			//System.out.println("OPEN: ");
 			for (Node n : open) {
 				n.pos.print();
-				if (!n.start) {
-					System.out.print("Parent: ");
-					curr.parent.pos.print();
-				}
-				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
+//				if (!n.start) {
+//					System.out.print("Parent: ");
+//					curr.parent.pos.print();
+//				}
+//				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
 
 			}
-			if (!curr.start) {
-				curr.parent.pos.print();
-			}
+//			if (!curr.start) {
+//				curr.parent.pos.print();
+//			}
 			open.remove(curr);
 			closed.add(curr);
 
 			if (curr.target) {
 				System.out.println("====== FOUND PATH ======");
 				setNodePath(curr);
-				System.out.println("====== DONE ======");
+				System.out.println("====== DONE ======" + (System.currentTimeMillis() - startTime) + "ms");
 				open.clear();
 				closed.clear();
 				return;
