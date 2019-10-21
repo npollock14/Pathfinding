@@ -65,7 +65,9 @@ public class Driver extends JPanel
 		if (keys[32] && tapSpace) {
 			try {
 				gr.pathTree.clear();
-				gr.getPath(a, b);
+				Point p1 = a;
+				Point p2 = b;
+				gr.getPath(p1, p2, true);
 				changes = false;
 			} catch (Exception e) {
 			}
@@ -287,6 +289,7 @@ class Grid {
 	ArrayList<Node> closed = new ArrayList<Node>();
 	ArrayList<Node> blocked = new ArrayList<Node>();
 	ArrayList<Node> pathTree = new ArrayList<Node>();
+	ArrayList<Node> masterPath = new ArrayList<Node>();
 	Camera cam;
 
 	public Grid(ArrayList<Node> blocked, Camera cam) {
@@ -295,27 +298,29 @@ class Grid {
 		this.cam = cam;
 	}
 
-	public void getPath(Point a, Point b) {
+	public void getPath(Point a, Point b, boolean refine) {
+		
 		double startTime = System.currentTimeMillis();
+		pathTree.clear();
 		open.add(new Node(a, false, false, true, getGCost(a, b), 0, null));
 		while (open.size() >= 1) {
 			Node curr = getLoF(open);
 			//System.out.print("========================== Chosen: ");
-			curr.pos.print();
+			//curr.pos.print();
 //			if (!curr.start) {
 //				//System.out.print("Parent: ");
 //				//curr.parent.pos.print();
 //			}
 			//System.out.println("OPEN: ");
-			for (Node n : open) {
-				n.pos.print();
+			//for (Node n : open) {
+			//	n.pos.print();
 //				if (!n.start) {
 //					System.out.print("Parent: ");
 //					curr.parent.pos.print();
 //				}
 //				System.out.println("GCOST: " + n.gCost + " SCOST: " + n.sCost + " FCOST: " + n.fCost);
 
-			}
+			//}
 //			if (!curr.start) {
 //				curr.parent.pos.print();
 //			}
@@ -323,11 +328,24 @@ class Grid {
 			closed.add(curr);
 
 			if (curr.target) {
-				System.out.println("====== FOUND PATH ======");
 				setNodePath(curr);
-				System.out.println("====== DONE ======" + (System.currentTimeMillis() - startTime) + "ms");
+				//System.out.println("====== DONE ======" + (System.currentTimeMillis() - startTime) + "ms");
 				open.clear();
 				closed.clear();
+				System.out.println(pathTree.size());
+				if(refine && pathTree.size() > 2) {
+					System.out.print("Adding: ");
+					pathTree.get(0).pos.print();
+					masterPath.add(pathTree.get(0));
+					getPath(a, pathTree.get(1).pos, true);
+				}
+				pathTree = masterPath;
+				
+				System.out.println("====== DONE ======" + (System.currentTimeMillis() - startTime) + "ms");
+				for(Node n : pathTree) {
+					n.pos.print();
+				}
+				
 				return;
 			}
 			ArrayList<Node> neighbors = getNeighbors(curr, a, b);
@@ -353,8 +371,8 @@ class Grid {
 					n.parent = curr;
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
-					System.out.println("Set (" + n.pos.x + ", " + n.pos.y + ")'s parent to: (" + n.parent.pos.x + ", "
-							+ n.parent.pos.y + ")");
+//					System.out.println("Set (" + n.pos.x + ", " + n.pos.y + ")'s parent to: (" + n.parent.pos.x + ", "
+//							+ n.parent.pos.y + ")");
 					if (!open.contains(n)) {
 						open.add(n);
 					}
@@ -372,9 +390,9 @@ class Grid {
 		}
 		pathTree.add(n);
 
-		for (Node node : pathTree) {
-			node.pos.print();
-		}
+//		for (Node node : pathTree) {
+//			node.pos.print();
+//		}
 
 	}
 
@@ -418,8 +436,8 @@ class Grid {
 					// add new node
 					Node n = new Node(tempPos, false, tempPos.isSamePosition(b), tempPos.isSamePosition(a),
 							getGCost(tempPos, b), 0, curr);
-					System.out.println("Created (" + n.pos.x + ", " + n.pos.y + ") and set their parent to: ("
-							+ curr.pos.x + ", " + curr.pos.y + ")");
+//					System.out.println("Created (" + n.pos.x + ", " + n.pos.y + ") and set their parent to: ("
+//							+ curr.pos.x + ", " + curr.pos.y + ")");
 					n.sCost = getSCost(n);
 					n.fCost = n.sCost + n.gCost;
 					neighbors.add(n);
