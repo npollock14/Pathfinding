@@ -340,6 +340,7 @@ class Grid {
 					getPath(a, pathTree.get(1).pos, true);
 				}
 				pathTree = masterPath;
+				//
 				
 				System.out.println("====== DONE ======" + (System.currentTimeMillis() - startTime) + "ms");
 				for(Node n : pathTree) {
