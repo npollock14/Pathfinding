@@ -29,17 +29,98 @@ public class Driver extends JPanel
 	Camera cam = new Camera(0,0,1.0,screenWidth,screenHeight);
 	Grid gr;
 	static Point mPos;
+	boolean tapX;
+	boolean tapSpace;
+	Point a = new Point(0,0),b = new Point(0,0);
+	boolean changes = true;
 
 	// ============== end of settings ==================
 
 	public void paint(Graphics g) {
 		super.paintComponent(g);
 		
-		gr.draw(g);
+		if(!changes && !a.isSamePosition(b)) {
+		gr.drawPath(g);
+		}else {
+			int w = 10;
+			g.setColor(Color.BLUE);
+			g.fillRect(cam.toXScreen(a.x * (w) - w / 2), cam.toYScreen((a.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			g.fillRect(cam.toXScreen(b.x * (w) - w / 2), cam.toYScreen((b.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			g.setColor(Color.BLACK);
+			g.setFont(new Font("Impact", 1, (int)cam.scale*10));
+			g.drawString("A", cam.toXScreen(a.x*w - w/4), cam.toYScreen(a.y*w + w/4));
+			g.setColor(Color.BLACK);
+			g.setFont(new Font("Impact", 1, (int)cam.scale*10));
+			g.drawString("B", cam.toXScreen(b.x*w -w/4), cam.toYScreen(b.y*w + w/4));
+			gr.draw(g);
+		}
 	}
 
 	public void update() throws InterruptedException {
 		cam.update(keys, getMousePos());
+		
+		if (!keys[32]) tapSpace = true;
+		if (keys[32] && tapSpace) {
+			try {
+				gr.pathTree.clear();
+				gr.getPath(a, b);
+				changes = false;
+			} catch (Exception e) {
+			}
+		}
+		
+		if(keys[90]) {
+			try {
+				a = new Point((cam.toXMap(getMousePos().x) + 5) / 10,(cam.toYMap(getMousePos().y) + 4) / 10 );
+				System.out.print("Point A set to: "); a.print();
+				changes = true;
+			} catch (Exception e) {
+
+			}
+		}
+		if(keys[88]) {
+			try {
+				b = new Point((cam.toXMap(getMousePos().x) + 5) / 10,(cam.toYMap(getMousePos().y) + 4) / 10 );
+				System.out.print("Point B set to: "); b.print();
+				changes = true;
+			} catch (Exception e) {
+
+			}
+		}
+		if (mouse[1]) {
+			try {
+				gr.blocked.add(makeBlockerNode((cam.toXMap(getMousePos().x) + 5) / 10,(cam.toYMap(getMousePos().y) + 4) / 10));
+				changes = true;
+			} catch (Exception e) {
+
+			}
+		}
+		if (mouse[3]) {
+			try {
+				for(Node n : gr.blocked) {
+					//new Point(cam.toXMap((cam.toXMap(getMousePos().x) + 5) / 10),cam.toYMap(cam.toYMap(getMousePos().y) + 4) / 10).print();
+					if(n.pos.isSamePosition(new Point((cam.toXMap(getMousePos().x) + 5) / 10,(cam.toYMap(getMousePos().y) + 4) / 10))){
+						gr.blocked.remove(n);
+						changes = true;
+					}
+				}
+				
+			} catch (Exception e) {
+				
+			}
+		}
+		if(keys[67]) {
+			//clear board:
+			gr.blocked.clear();
+			gr.pathTree.clear();
+			a = new Point(0,0);
+			b = new Point(0,0);
+			changes = true;
+		}
+		
+		
 		//cam.focus(new Point(0,0));
 	}
 
@@ -47,25 +128,8 @@ public class Driver extends JPanel
 		cam.focus(new Point(5000,5000));
 		cam.update(keys, getMousePos());
 		ArrayList<Node> blocked = new ArrayList<Node>();
-		blocked.add(makeBlockerNode(1, 1));
-		blocked.add(makeBlockerNode(0, 2));
-		blocked.add(makeBlockerNode(-1, 0));
-		blocked.add(makeBlockerNode(-1, -1));
-		blocked.add(makeBlockerNode(1, 0));
-		blocked.add(makeBlockerNode(1, -1));
-		blocked.add(makeBlockerNode(0, -1));
-		blocked.add(makeBlockerNode(1, 2));
-		cam.toXScreen(100);
-		// blocked.add(makeBlockerNode(-1, -10));
-		// blocked.add(makeBlockerNode(5, -10));
 		gr = new Grid(blocked, cam);
-		gr.getPath(new Point(8, -4), new Point(3, 8));
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
 	}
 
 	// ==================code above ==========================
@@ -271,6 +335,18 @@ class Grid {
 				if (n.blocked || closed.contains(n)) {
 					continue;
 				}
+//				Node temp = n;
+//				Node temp2 = n;
+//				temp.parent = curr;
+//				temp.sCost = getSCost(n);
+//				if(temp.sCost < n.sCost) {
+//					n.parent = curr;
+//					n.sCost = getSCost(n);
+//					n.fCost = n.sCost + n.gCost;
+//				}else {
+//					temp = temp2;
+//					n = temp2;
+//				}
 				if (!open.contains(n)) {
 
 					n.parent = curr;
@@ -384,6 +460,44 @@ class Grid {
 		return lowF;
 	}
 
+	public void drawPath(Graphics g) {
+
+		// draw lines
+		int w = 10;
+
+		
+		
+		for (Node o : blocked) {
+			g.setColor(Color.BLACK);
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2 ), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			
+		}
+		for (Node o : pathTree) {
+			g.setColor(Color.BLUE);
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
+					(int) (w * cam.scale), (int) (w * cam.scale));
+			
+			if(o.start) {
+				g.setColor(Color.BLACK);
+				g.setFont(new Font("Impact", 1, (int)cam.scale*10));
+				g.drawString("A", cam.toXScreen(o.pos.x*w - w/4), cam.toYScreen(o.pos.y*w + w/4));
+			}
+			if(o.target) {
+				g.setColor(Color.BLACK);
+				g.setFont(new Font("Impact", 1, (int)cam.scale*10));
+				g.drawString("B", cam.toXScreen(o.pos.x*w -w/4), cam.toYScreen(o.pos.y*w + w/4));
+			}
+			
+		}
+		for (int i = 0; i <= 1000 + 1; i++) {
+			g.setColor(Color.LIGHT_GRAY);
+			g.drawLine(cam.toXScreen(i * 10 - w / 2), cam.toYScreen(0 - w / 2), cam.toXScreen(i * 10 - w / 2),
+					cam.toYScreen(10000 + 5));
+			g.drawLine(cam.toXScreen(0 - w / 2), cam.toYScreen(i * 10 - w / 2), cam.toXScreen(10000 - w / 2),
+					cam.toYScreen(i * 10 - w / 2));
+		}
+	}
 	public void draw(Graphics g) {
 
 		// draw lines
@@ -393,27 +507,11 @@ class Grid {
 		
 		for (Node o : blocked) {
 			g.setColor(Color.BLACK);
-			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2 + 5000), cam.toYScreen((-o.pos.y * (w)) - (w / 2)+ 5000),
+			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2), cam.toYScreen((o.pos.y * (w)) - (w / 2)),
 					(int) (w * cam.scale), (int) (w * cam.scale));
 			
 		}
-		for (Node o : pathTree) {
-			g.setColor(Color.BLUE);
-			g.fillRect(cam.toXScreen(o.pos.x * (w) - w / 2+ 5000), cam.toYScreen((-o.pos.y * (w)) - (w / 2)+ 5000),
-					(int) (w * cam.scale), (int) (w * cam.scale));
-			
-			if(o.start) {
-				g.setColor(Color.BLACK);
-				g.setFont(new Font("Impact", 1, (int)cam.scale*10));
-				g.drawString("A", cam.toXScreen(o.pos.x*w - w/4+ 5000), cam.toYScreen(-o.pos.y*w + w/4+ 5000));
-			}
-			if(o.target) {
-				g.setColor(Color.BLACK);
-				g.setFont(new Font("Impact", 1, (int)cam.scale*10));
-				g.drawString("B", cam.toXScreen(o.pos.x*w -w/4+ 5000), cam.toYScreen(-o.pos.y*w + w/4+ 5000));
-			}
-			
-		}
+		
 		for (int i = 0; i <= 1000 + 1; i++) {
 			g.setColor(Color.LIGHT_GRAY);
 			g.drawLine(cam.toXScreen(i * 10 - w / 2), cam.toYScreen(0 - w / 2), cam.toXScreen(i * 10 - w / 2),
